@@ -65,6 +65,77 @@ function parseCreateProductInput(
   };
 }
 
+
+function parseUpdateProduct(
+    value: unknown
+): UpdateProductInput | null { 
+  if(!isRecord(value)) {
+        return  null 
+    }
+
+const allowedFields = new Set([
+    "name", "price", "stock", "category", "active"
+]);
+
+
+const keys = Object.keys(value); 
+
+
+if (keys.length === 0){
+  return null
+}
+
+
+if (keys.some((key) => !allowedFields.has(key))) {
+  return null
+}
+
+const update:   UpdateProductInput = {}
+
+if ("name" in value) {
+  if(typeof value.name !== "string" || value.name.trim().length ===  0) {
+    return null
+  }
+  update.name = value.name 
+}
+
+if ("price" in value) {
+  if(typeof value.price !== "number" || !Number.isFinite(value.price) || value.price <= 0) {
+    return null
+  }
+  update.price = value.price
+}
+
+if ("stock" in value) {
+  if(typeof value.stock !== "number" || !Number.isFinite(value.stock) || value.stock <= 0) {
+    return null
+  }
+
+  update.stock = value.stock
+}
+
+if ("category" in value) {
+  if(typeof value.category !== "string" || value.category.trim().length ===  0) {
+    return null
+  }
+
+  update.category = value.category.trim().toLowerCase();
+}
+
+if ("active" in value) {
+  if(typeof value.active !== "boolean" ) {
+    return null
+  }
+  update.active = value.active 
+}
+
+return update;
+}
+
+
+
+
+
 app.get("/api/products", (req: Request, res: Response) => {
   let result = [...products];
 
@@ -161,10 +232,80 @@ app.post("/api/products", (req: Request, res: Response)=> {
         data: product
     })
 
-
-
-
 })
+
+
+app.patch("/api/products/:id", (req: Request, res: Response) => {
+  const rawId = req.params.id;
+  const id = parseProductId(Array.isArray(rawId) ? rawId[0] : rawId);
+
+  if (id === null) {
+    return res.status(400).json({
+      success: false,
+      message: "El id debe ser un numero positivo",
+    });
+  }
+
+  const productIndex = products.findIndex((product) => product.id === id);
+
+  if (productIndex === -1) {
+    return res.status(404).json({
+      success: false,
+      message: "Producto no encontrado",
+    });
+  }
+
+  const body: unknown = req.body;
+  const update = parseUpdateProduct(body);
+
+  if (!update) {
+    return res.status(400).json({
+      success: false,
+      message: "Datos de actualizacion invalidos",
+    });
+  }
+
+  const updatedProduct = {
+    ...products[productIndex],
+    ...update,
+  };
+
+  products[productIndex] = updatedProduct;
+
+  return res.status(200).json({
+    success: true,
+    message: "producto actualizado",
+    data: updatedProduct,
+  });
+});
+
+app.delete("/api/products/:id", (req: Request, res: Response)=> {
+  const rawId = req.params.id;
+  const id = parseProductId(Array.isArray(rawId) ? rawId[0] : rawId);
+
+   if (id === null) {
+    return res.status(400).json({
+      success: false,
+      message: "El id debe ser un numero positivo",
+    });
+  }
+
+  const productIndex = products.findIndex((product) => product.id === id);
+
+  if (productIndex === -1) {
+    return res.status(404).json({
+      success: false,
+      message: "Producto no encontrado",
+    });
+  }
+
+  products.splice(productIndex, 1)
+
+  return res.status(204).send(); 
+})
+
+
+
 
 app.get("/", (req: Request, res: Response) => {
   return res.status(200).json({
