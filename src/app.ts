@@ -56,6 +56,30 @@ app.get("/api/products", (req: Request, res: Response) => {
     });
 });
 
+app.get("/api/products/:id", (req: Request, res: Response) => {
+  const rawId = req.params.id;
+  const id = parseProductId(rawId);
+    if (id === null) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid product ID, el id debe ser un numero entero positivo",
+        });
+    }
+
+    const product = products.find((p) => p.id === id);
+    if (!product) {
+        return res.status(404).json({
+            success: false,
+            message: "Product not found",
+        });
+    }
+
+    return res.status(200).json({
+        success: true,
+        data: product,
+    });
+});
+
 
 
 app.get("/", (req: Request, res: Response) => {
